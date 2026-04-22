@@ -57,7 +57,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--optimizer_eps", default=1e-8, type=float, help="The epsilon to add to the optimizer operations (if relevant) to stabalize and avoid dividing by zero.")
     parser.add_argument("--padding_side", default='right', type=str, help="The padding side to use for the tokenizer")
     parser.add_argument("--amsgrad", default=False, action=argparse.BooleanOptionalAction, help="Whether to use AMSGrad variant of the AdamW optimizer. (Only relevant if adamw chosen for optimizer)")
-    parser.add_argument("--causal", default=False, action=argparse.BooleanOptionalAction, help="Whether to use causal masking")
+    parser.add_argument("--3D-triangular-causal-mask", dest="three_d_triangular_causal_mask", default=False, action=argparse.BooleanOptionalAction, help="Whether to build a 3D lower-triangular causal attention mask during collation (required for per-example last-non-pad pooling with take_final).")
     parser.add_argument("--take_final", default=False, action=argparse.BooleanOptionalAction, help="Whether to take the last token rather than the first one.")
     parser.add_argument("--enc_dec", default=False, action=argparse.BooleanOptionalAction, help="Flag to indicate that the architecture is an encoder-decoder.")
 
@@ -69,6 +69,9 @@ def _parse_arguments() -> argparse.Namespace:
 
     args = parser.parse_args()
     args.model_name = pathlib.Path(args.model_name_or_path).stem
+
+    if args.take_final and args.padding_side != "left":
+        parser.error("--take_final requires --padding_side=left; pooling the last position with right-padding would select a pad token.")
 
     if args.wandb and args.exp_name is None:
         args.exp_name = "_".join([args.model_name, args.task, str(args.seed)])

@@ -61,7 +61,7 @@ parser.add_argument("--beta1", default=0.9, type=float, help="The value of beta1
 parser.add_argument("--beta2", default=0.999, type=float, help="The value of beta2 in optimizers that require it.")
 parser.add_argument("--optimizer_eps", default=1e-8, type=float, help="The epsilon to add to the optimizer operations (if relevant) to stabalize and avoid dividing by zero.")
 parser.add_argument("--amsgrad", default=False, action=argparse.BooleanOptionalAction, help="Whether to use AMSGrad variant of the AdamW optimizer. (Only relevant if adamw chosen for optimizer)")
-parser.add_argument("--causal", default=False, action=argparse.BooleanOptionalAction, help="Whether to use causal masking")
+parser.add_argument("--3D-triangular-causal-mask", dest="three_d_triangular_causal_mask", default=False, action=argparse.BooleanOptionalAction, help="Whether to build a 3D lower-triangular causal attention mask during collation (required for per-example last-non-pad pooling with take_final).")
 parser.add_argument("--take_final", default=False, action=argparse.BooleanOptionalAction, help="Whether to take the last token rather than the first one.")
 parser.add_argument("--enc_dec", default=False, action=argparse.BooleanOptionalAction, help="Flag to indicate that the architecture is an encoder-decoder.")
 

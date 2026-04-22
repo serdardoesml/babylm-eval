@@ -106,15 +106,17 @@ class Dataset(torch.utils.data.Dataset):
         return text, label
 
     @staticmethod
-    def collate_function(tokenizer: PreTrainedTokenizerBase, causal: bool, max_length: int, data: list[tuple[str, str] | int | str]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def collate_function(tokenizer: PreTrainedTokenizerBase, three_d_triangular_causal_mask: bool, max_length: int, data: list[tuple[str, str] | int | str]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """This functions tokenizes, creates a attention_mask and
         collates a batch of texts/pairs of texts.
 
         Args:
             tokenizer(PreTrainedTokenizerBase): The tokenizer
                 corresponding to the model to finetune.
-            causal(bool): Whether or not the model expects causal
-                attention masking.
+            three_d_triangular_causal_mask(bool): Whether or not to
+                build a 3D lower-triangular causal attention mask
+                of shape (B, S, S) instead of the default 2D (B, S)
+                padding mask.
             max_length(int): The maximum sequence length before the
                 input is truncated.
             data(list[tuple[str, str] | int | str]): A list
@@ -141,7 +143,7 @@ class Dataset(torch.utils.data.Dataset):
         labels = torch.tensor(labels, dtype=torch.long)
         encodings = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
 
-        if causal:
+        if three_d_triangular_causal_mask:
             attention_mask = encodings.attention_mask.unsqueeze(1).repeat(1, encodings.attention_mask.size(-1), 1).tril(diagonal=0)
         else:
             attention_mask = encodings.attention_mask
@@ -242,15 +244,17 @@ class PredictDataset(torch.utils.data.Dataset):
         return text
 
     @staticmethod
-    def collate_function(tokenizer: PreTrainedTokenizerBase, causal: bool, max_length: int, data: list[tuple[str, str] | int]) -> tuple[torch.Tensor, torch.Tensor]:
+    def collate_function(tokenizer: PreTrainedTokenizerBase, three_d_triangular_causal_mask: bool, max_length: int, data: list[tuple[str, str] | int]) -> tuple[torch.Tensor, torch.Tensor]:
         """This functions tokenizes, creates a attention_mask, and
         collates a batch of texts/pairs of texts.
 
         Args:
             tokenizer(PreTrainedTokenizerBase): The tokenizer
                 corresponding to the model to finetune.
-            causal(bool): Whether or not the model expects causal
-                attention masking.
+            three_d_triangular_causal_mask(bool): Whether or not to
+                build a 3D lower-triangular causal attention mask
+                of shape (B, S, S) instead of the default 2D (B, S)
+                padding mask.
             max_length(int): The maximum sequence length before the
                 input is truncated.
             data(list[tuple[str, str] | int | str]): A list
@@ -270,7 +274,7 @@ class PredictDataset(torch.utils.data.Dataset):
 
         encodings = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
 
-        if causal:
+        if three_d_triangular_causal_mask:
             attention_mask = encodings.attention_mask.unsqueeze(1).repeat(1, encodings.attention_mask.size(-1), 1).tril(diagonal=0)
         else:
             attention_mask = encodings.attention_mask

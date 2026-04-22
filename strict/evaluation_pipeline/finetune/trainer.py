@@ -29,14 +29,14 @@ import wandb
 
 def _load_labeled_dataset(data_path: pathlib.Path, batch_size: int, tokenizer: PreTrainedTokenizerBase, shuffle: bool, drop_last: bool, args: Namespace) -> DataLoader:
     dataset = Dataset(data_path, args.task)
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=partial(dataset.collate_function, tokenizer, args.causal, args.sequence_length), shuffle=shuffle, drop_last=drop_last)
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=partial(dataset.collate_function, tokenizer, args.three_d_triangular_causal_mask, args.sequence_length), shuffle=shuffle, drop_last=drop_last)
 
     return dataloader
 
 
 def _load_predict_dataset(data_path: pathlib.Path, batch_size: int, tokenizer: PreTrainedTokenizerBase, args: Namespace):
     dataset = PredictDataset(data_path, args.task)
-    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=partial(dataset.collate_function, tokenizer, args.causal, args.sequence_length))
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=partial(dataset.collate_function, tokenizer, args.three_d_triangular_causal_mask, args.sequence_length))
 
     return dataloader
 
