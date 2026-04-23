@@ -4,7 +4,9 @@
 This repository contains the setup for evaluation for BabyLM 2026. We provide separate evaluation for the Strict (+Strict-Small) track, and the Multilingual track. See the two track directories for more specific information on evaluation for these two tracks.
 
 ## Leaderboard
-The leaderboard is live now: [![Leaderboard](https://img.shields.io/badge/🤗-Leaderboard-yellow?style=for-the-badge)](https://huggingface.co/spaces/BabyLM-community/BabyLM-Leaderboard-2026)
+The leaderboard is live now: 
+
+[![Leaderboard](https://img.shields.io/badge/🤗-Leaderboard-yellow?style=for-the-badge)](https://huggingface.co/spaces/BabyLM-community/BabyLM-Leaderboard-2026)
 
 ### Submitting to the leaderboard
 
