@@ -2,7 +2,7 @@
 
 ## Overview
 
-This code provides the backend for the BabyLM Challenge's evaluation pipeline. This year we decided to implement it from scratch. It currently supports 3 different evaluation types: fine-tuning (sequence), sentence-level zero-shot logit calculations, and word level logit calculations (although the last one is implemented for a specific task).
+This code provides the backend for evaluating models participating in the Strict and Strict-small track of BabyLM. The code for this has been adapted from last years iteration. 
 
 An addition from last year that we keep is that we have two evaluation types: **fast** evaluation uses a smaller set of evaluation samples, allows for quick testing of your models, and is what you will report performance on for the intermediate model checkpoints. The **full** evaluation should be run on your final model.
 
@@ -115,11 +115,8 @@ For the DevBench data make sure to run:
 ```
 
 ## Evaluation 
-This year, we provide different sets of evaluation tasks for different tracks.
 
-### Text-only evaluation
-If you are participating in one of the text-only tracks (Strict or Strict-small) or interaction track, use these instructions.
-#### Zero-shot evaluation
+### Zero-shot evaluation
 
 Use the following shell script to evaluate on the full zero-shot evaluations:
 ```bash
@@ -153,13 +150,13 @@ To make sure they fit your checkpoint naming scheme. To run the script type the 
 > - **Encoder**: `CLS` text with a mask / prefix ending with a mask `EOS` (the code checks whether a `CLS` and `EOS` are defined, if not, they are not added).
 > - **Decoder**: `BOS` / `MASK` text to predict in case of prefix (The choice of `BOS` or `MASK` depends on the architecture).
 
-#### AoA evaluation
+### AoA evaluation
 Use the following shell script to evaluate on the fast zero-shot evaluations:
 ```bash
 ./eval_aoa.sh <path_to_model> <architecture (causal/mntp/mlm/enc_dec_mask/enc_dec_prefix)> <track> <eval_dir (optional, default:evaluation_data/full_eval/cdi_childes/cdi_childes.json)> <output_dir (optional, default:results)>
 ```
 
-#### Fine-tuning or low-rank adapter training
+### Fine-tuning or low-rank adapter training
 
 Like last year, we provide a script to support fine-tuning on all tasks:
 ```bash
@@ -186,37 +183,6 @@ This will fine-tune your model on all (Super)GLUE tasks.
 
 > [!Note]
 > The classification head and the way the model does classification can be adapted by you. Change the code found in the `evaluation_pipeline/finetune/classifier_model.py` file to do this.
-
-<!---
-Here are the hyperparameters used for fine-tuning for all tasks. Feel free to modify these, or to set task-specific hyperparameters:
-| Hyperparameter | Value |
-| -------------- | ----- |
-| Initial learning rate | 5e-5 |
-| Batch size | 32 |
-| Maximum epochs | 10 |
-| Seed | 42 |
---->
-
-### Multimodal evaluation
-
-If you are participating in the multimodal track, use these instructions.
-
-First, run your models on the text-only evaluations, including BLiMP, the BLiMP supplement, EWoK, and (Super)GLUE. As long as your model is compatible with the AutoModelForCausalLM and AutoModelForSequenceClassification classes, you can use the same instructions as above to evaluate on the text-only tasks.
-
-In addition, use the following command to evaluate on Winoground (where we use an unpaired text score), VQA (accuracy with 7 distractors) and DevBench:
-```bash
-./eval_multimodal.sh <path_to_model> <architecture (causal/mntp/mlm/enc_dec_mask/enc_dec_prefix)> <model_type (git/flamingo/llava/flava/clip/blip/siglip/bridgetower/vilt/cvcl)> <image_model>
-```
-The model types are used for DevBench, if you need a different model_type, implement it in the `evaluation_pipeline/devbench/model_classes` folder. (See other files in that folder for examples.) Then add a wrapper to `evaluation_pipeline/devbench/eval.py`. Be sure to submit a pull request so others can benefit from your implementation!
-
-## Baselines
-The baseline models are available from the BabyLM Community huggingface page here: https://huggingface.co/BabyLM-community .
-
-For the strict and strict-small tracks, we release the following baselines: [GPT-BERT](https://arxiv.org/pdf/2410.24159), the winning submission from the 2024 iteration, and GPT-2 Small as a purely autoregressive baseline. Models containing `-100m` are for the strict track; those containing `-10m` are for strict-small.
-
-For the multimodal tracks, we release [Flamingo](https://proceedings.neurips.cc/paper_files/paper/2022/file/960a172bc7fbf0177ccccbb411a7d800-Paper-Conference.pdf) and [GIT](https://openreview.net/pdf?id=b4tMhpN0JC) baselines.
-
-For the interaction track, we release two baselines: An "RLHF" baseline, where a model pre-trained on the BabyLM corpus is further finetuned via [PPO](https://arxiv.org/pdf/1707.06347) to maximize a scalar reward mimicking caregiver responses, and a "Preference Optimization" baseline, where a model is optimized via [SimPO](https://arxiv.org/pdf/2405.14734) to prefer teacher corrections over its own generated outputs. More details are available in Section 4.5 of the [call for papers](https://arxiv.org/pdf/2502.10645?).
 
 ## Submission Requirements
 
@@ -253,13 +219,8 @@ The submission is a JSON file where the first key represents the benchmark, the 
 {"glue": {"boolq": {"predictions": [{"id": "boolq_0", "pred": 0}, {"id": "boolq_1", "pred": 1}, ...]}}}
 ```
 
-### Leaderboard
-You can find the leaderboard for the non-hidden tasks [here](https://huggingface.co/spaces/BabyLM-community/babylm-leaderboard-2025-all-tasks).
-
-
 ### Steps to submission
-
-For all challenge tracks, you should run the 'eval_zero_shot.sh' and 'eval_finetuning.sh' scripts on the final checkpoint. The 'eval_aoa.sh' and 'eval_zero_shot_fast_all_revisions.sh' scripts should likewise be run for all challenge tracks, but these conduct evaluations for all model checkpoints. If you are in the multimodal track, you should run 'eval_multimodal.sh' as well. Once you have run all scripts for evaluation, you should run 'collate_preds.sh' and submit to the [leaderboard](https://huggingface.co/spaces/BabyLM-community/babylm-leaderboard-2025-all-tasks).
+You should run the 'eval_zero_shot.sh' and 'eval_finetuning.sh' scripts on the final checkpoint. The 'eval_aoa.sh' and 'eval_zero_shot_fast_all_revisions.sh' scripts should likewise be run for all challenge tracks, but these conduct evaluations for all model checkpoints. If you are in the multimodal track, you should run 'eval_multimodal.sh' as well. Once you have run all scripts for evaluation, you should run 'collate_preds.sh' and submit to the [leaderboard](https://huggingface.co/spaces/BabyLM-community/babylm-leaderboard-2025-all-tasks).
 
 
 ----
@@ -274,29 +235,3 @@ To run your finetuning code with Weights and Biases, you need to pass the `--wan
 ### Support
 
 The best way to get support is to open an issue on this repo or join the [BabyLM slack](https://join.slack.com/t/babylmchallenge/shared_invite/zt-2gqgqaumu-5ebxxADuT561aT_ooKbT1Q). Join the `#evaluation-pipeline` channel, which is dedicated to support for use of this repository.
-
-## Optional Extras
-Extras dependencies can be installed via `pip install -e ".[NAME]"`
-
-| Name          | Use                                   |
-|---------------|---------------------------------------|
-| anthropic     | For using Anthropic's models          |
-| deepsparse     | For running NM's DeepSparse models    |
-| dev           | For linting PRs and contributions     |
-| gptq          | For loading models with GPTQ          |
-| hf_transfer   | For speeding up HF Hub file downloads |
-| ifeval        | For running the IFEval task           |
-| neuronx       | For running on AWS inf2 instances     |
-| mamba         | For loading Mamba SSM models          |
-| math          | For running math task answer checking |
-| multilingual  | For multilingual tokenizers           |
-| openai        | For using OpenAI's models             |
-| optimum       | For running Intel OpenVINO models     |
-| promptsource  | For using PromptSource prompts        |
-| sentencepiece | For using the sentencepiece tokenizer |
-| sparseml      | For using NM's SparseML models        |
-| testing       | For running library test suite        |
-| vllm          | For loading models with vLLM          |
-| zeno          | For visualizing results with Zeno     |
-|---------------|---------------------------------------|
-| all           | Loads all extras (not recommended)    |
