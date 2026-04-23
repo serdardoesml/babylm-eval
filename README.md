@@ -3,16 +3,47 @@
 
 This repository contains the setup for evaluation for BabyLM 2026. We provide separate evaluation for the Strict (+Strict-Small) track, and the Multilingual track. See the two track directories for more specific information on evaluation for these two tracks.
 
-## Installation
+## Leaderboard
+The leaderboard is live now: [![Leaderboard](https://img.shields.io/badge/🤗-Leaderboard-yellow?style=for-the-badge)](https://huggingface.co/spaces/BabyLM-community/BabyLM-Leaderboard-2026)
+
+### Submitting to the leaderboard
+
+The two tracks use different submission formats:
+
+#### Strict and Strict-small tracks
+
+Upload a **predictions file** produced by the BabyLM evaluation pipeline. After running both zero-shot and fine-tuning evaluation on your final model, create the submission file with:
 
 ```bash
-pip install -r requirements.txt
+cd strict
+bash scripts/collate_preds.sh NAME_OF_YOUR_MODEL BACKEND SUBMISSION_TRACK
 ```
+
+Scores are computed server-side against the held-out targets, so you only upload predictions. Add the `--fast` flag to also include checkpoint evaluation results, which is required for a full BabyLM Challenge submission.
+
+#### Multilingual track
+
+Upload a **pre-computed scores file**. Run zero-shot and fine-tuning evaluation first, then collate the results into a single submission file:
+
+```bash
+cd multilingual
+bash scripts/zeroshot_model.sh --model_name YOUR_MODEL --langs "eng nld zho"
+bash scripts/finetune_model.sh --model_name YOUR_MODEL --langs "eng nld zho"
+
+# Collate into a single submission file
+python scripts/collate_results.py --model_name YOUR_MODEL
+```
+
+> [!NOTE]
+> Incomplete evaluation is allowed for both tracks: you can submit results covering only the languages or tasks your model was trained on. Missing tasks are set to 0 and are taken into account when computing the average score.
+
+> [!IMPORTANT]
+> Make sure your model is **publicly available** on HuggingFace before submitting.
 
 ## Baselines
 We train GPT-2 baseline models on the datasets. We provide monolingual models, as well as bi- and trilingual models, trained on equal language splits. The models are available on HuggingFace [here](https://huggingface.co/BabyLM-community/models).
 
-Following [BabyBabelLM](https://arxiv.org/pdf/2510.10159), we divide evaluation for the multilingual models up in zero-shot and fine-tuning evaluation. Zero-shot evaluation is done through `lm-eval`. Fine-tuning is adapted from a script of previous BabyLM editions.
+Following [BabyBabelLM](https://arxiv.org/pdf/2510.10159), we divide evaluation for the multilingual models up in zero-shot and fine-tuning evaluation. Zero-shot evaluation for the multilingual track is done through `lm-eval`. Fine-tuning is adapted from a script of previous BabyLM editions.
 
 ### Strict / Strict-Small
 #### Zero-shot Tasks

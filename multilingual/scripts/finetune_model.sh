@@ -25,11 +25,6 @@ if [[ -z "$MODEL_NAME" ]]; then
     echo "Error: --model_name is required"; exit 1
 fi
 
-# Set HF_TOKEN in .env for gated models
-set -a
-source .env
-set +a
-
 model_basename=$(basename $MODEL_NAME)
 for LANGUAGE in $langs; do
     LANGUAGE=${LANGUAGE:0:2}  # eng/nld/zho -> en/nl/zh
