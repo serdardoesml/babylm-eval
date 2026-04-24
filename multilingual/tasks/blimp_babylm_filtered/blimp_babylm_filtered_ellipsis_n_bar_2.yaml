@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_ellipsis_n_bar_2
+dataset_name: ellipsis_n_bar_2

@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_npi_present_1
+dataset_name: npi_present_1

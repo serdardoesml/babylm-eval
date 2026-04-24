@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_sentential_negation_npi_licensor_present
+dataset_name: sentential_negation_npi_licensor_present

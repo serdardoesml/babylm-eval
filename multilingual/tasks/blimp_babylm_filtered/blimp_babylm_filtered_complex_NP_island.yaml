@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_complex_NP_island
+dataset_name: complex_NP_island

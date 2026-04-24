@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_coordinate_structure_constraint_complex_left_branch
+dataset_name: coordinate_structure_constraint_complex_left_branch

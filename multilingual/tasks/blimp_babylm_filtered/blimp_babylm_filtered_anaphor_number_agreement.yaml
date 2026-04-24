@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_anaphor_number_agreement
+dataset_name: anaphor_number_agreement

@@ -28,7 +28,7 @@ for lang in $langs; do
         --batch_size auto:10 \
         --num_fewshot 0 \
         --log_samples \
-        --include_path ../tasks/
+        --include_path tasks/
 
     echo "Completed evaluation for ${lang}"
 done

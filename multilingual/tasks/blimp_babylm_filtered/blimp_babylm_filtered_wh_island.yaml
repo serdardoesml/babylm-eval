@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_wh_island
+dataset_name: wh_island

@@ -1,0 +1,3 @@
+include: _default.yaml
+task: blimp_babylm_filtered_irregular_past_participle_verbs
+dataset_name: irregular_past_participle_verbs
