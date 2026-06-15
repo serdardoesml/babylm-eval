@@ -17,7 +17,7 @@ OTHER_FAST_REVISIONS = [f"chck_{i}M" for i in range(1, 10)] + [f"chck_{i*10}M" f
 
 BLIMP_FAST_SIZE = 200
 SUPPLEMENT_FAST_SIZE = 50
-EWOK_FAST_SIZE = 100 * 2
+EWOK_FAST_SIZE = 100
 ENTITY_TRACKING_FAST_SIZE = {"regular_0_ops": 606, "regular_1_ops": 607, "regular_2_ops": 606, "regular_3_ops": 606, "regular_4_ops": 568, "regular_5_ops": 159}
 
 READING_SIZE = 1726
@@ -101,17 +101,17 @@ BLIMP_SIZES = {
 SUPPLEMENT_SIZES = {"hypernym": 842, "qa_congruence_easy": 64, "qa_congruence_tricky": 165, "subject_aux_inversion": 3867, "turn_taking": 280}
 
 EWOK_SIZES = {
-    'agent-properties': 2210 * 2,
-    'social-relations': 1548 * 2,
-    'physical-relations': 818 * 2,
-    'material-dynamics': 770 * 2,
-    'physical-interactions': 556 * 2,
-    'spatial-relations': 490 * 2,
-    'social-properties': 328 * 2,
-    'quantitative-properties': 314 * 2,
-    'social-interactions': 294 * 2,
-    'material-properties': 170 * 2,
-    'physical-dynamics': 120 * 2
+    'agent-properties': 2210,
+    'social-relations': 1548,
+    'physical-relations': 818,
+    'material-dynamics': 770,
+    'physical-interactions': 556,
+    'spatial-relations': 490,
+    'social-properties': 328,
+    'quantitative-properties': 314,
+    'social-interactions': 294,
+    'material-properties': 170,
+    'physical-dynamics': 120
 }
 
 ENTITY_TRACKING_SIZES = {

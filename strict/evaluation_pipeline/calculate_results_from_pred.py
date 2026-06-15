@@ -87,9 +87,9 @@ def _calculate_ewok_results(
             subtask_results = results_dict[subtask]["predictions"]
             for result, data in zip(subtask_results, data_file.readlines()):
                 data = json.loads(data)
-                # print(result["pred"], data["Target1"])
                 total += 1
-                if result["pred"].strip() == data["Target1"].strip():
+                correct_sentence = " ".join([data["Context1"], data["Target1"]])
+                if result["pred"].strip() == correct_sentence.strip():
                     correct += 1
             scores.append((correct / total) * 100)
     return sum(scores) / len(scores)
