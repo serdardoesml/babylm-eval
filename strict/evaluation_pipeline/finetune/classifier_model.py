@@ -118,6 +118,7 @@ class ModelForSequenceClassification(nn.Module):
         if self.enc_dec:
             self.decoder_start_token_id = model_config.decoder_start_token_id
         hidden_size = model_config.hidden_size
+        self.hidden_size = hidden_size
         self.classifier: nn.Module = ClassifierHead(config, hidden_size)
         self.take_final: bool = config.take_final
 
@@ -153,16 +154,18 @@ class ModelForSequenceClassification(nn.Module):
         elif isinstance(output_transformer, ModelOutput):
             if hasattr(output_transformer, "hidden_states") and output_transformer.hidden_states is not None:
                 encoding = output_transformer.hidden_states[-1]
-            elif hasattr(output_transformer, "logits"):
-                encoding = output_transformer.logits
             elif hasattr(output_transformer, "last_hidden_state"):
                 encoding = output_transformer.last_hidden_state
+            elif hasattr(output_transformer, "logits"):
+                encoding = output_transformer.logits
             else:
                 print("Unknown name for output of the model!")
                 exit()
         else:
             print(f"Add support for output type: {type(output_transformer)}!")
             exit()
+        if encoding.size(-1) != self.hidden_size:
+            raise ValueError(f"Expected hidden size {self.hidden_size}, got {encoding.size(-1)}. If this is a causal LM, update the checkpoint modeling file so output_hidden_states=True returns hidden_states.")
         if self.take_final and not self.enc_dec and not self.three_d_triangular_causal_mask:
             transformer_output: torch.Tensor = encoding[:, -1]
         elif self.take_final and not self.enc_dec:
