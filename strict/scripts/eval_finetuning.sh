@@ -1,8 +1,10 @@
 #!/bin/bash
 
-set -a
-source ../.env
-set +a
+if [[ -f ../.env ]]; then
+    set -a
+    source ../.env
+    set +a
+fi
 
 # Default values
 MODEL_PATH=""
@@ -12,6 +14,11 @@ BIG_BSZ=16
 MAX_EPOCHS=10
 WSC_EPOCHS=30
 SEED=42
+LORA_RANK=256
+LORA_ALPHA=512
+LORA_DROPOUT=0.0
+LORA_TARGETS="qkv,out,up,down"
+LORA_FLAG="--lora"
 WANDB_FLAG=""
 
 # Parse named arguments
@@ -44,6 +51,26 @@ while [[ $# -gt 0 ]]; do
         --seed)
             SEED="$2"
             shift 2
+            ;;
+        --lora_rank)
+            LORA_RANK="$2"
+            shift 2
+            ;;
+        --lora_alpha)
+            LORA_ALPHA="$2"
+            shift 2
+            ;;
+        --lora_dropout)
+            LORA_DROPOUT="$2"
+            shift 2
+            ;;
+        --lora_targets)
+            LORA_TARGETS="$2"
+            shift 2
+            ;;
+        --no_lora)
+            LORA_FLAG="--no-lora"
+            shift
             ;;
         --wandb)
             WANDB_FLAG="--wandb"
@@ -79,6 +106,11 @@ for task in {boolq,multirc}; do
         --verbose \
         --padding_side left \
         --take_final \
+        $LORA_FLAG \
+        --lora_rank $LORA_RANK \
+        --lora_alpha $LORA_ALPHA \
+        --lora_dropout $LORA_DROPOUT \
+        --lora_targets "$LORA_TARGETS" \
         $WANDB_FLAG
 done
 
@@ -102,6 +134,11 @@ python -m evaluation_pipeline.finetune.run \
     --verbose \
     --padding_side left \
     --take_final \
+    $LORA_FLAG \
+    --lora_rank $LORA_RANK \
+    --lora_alpha $LORA_ALPHA \
+    --lora_dropout $LORA_DROPOUT \
+    --lora_targets "$LORA_TARGETS" \
     $WANDB_FLAG
 
 python -m evaluation_pipeline.finetune.run \
@@ -124,6 +161,11 @@ python -m evaluation_pipeline.finetune.run \
     --verbose \
     --padding_side left \
     --take_final \
+    $LORA_FLAG \
+    --lora_rank $LORA_RANK \
+    --lora_alpha $LORA_ALPHA \
+    --lora_dropout $LORA_DROPOUT \
+    --lora_targets "$LORA_TARGETS" \
     $WANDB_FLAG
 
 for task in {mrpc,qqp}; do
@@ -148,6 +190,11 @@ for task in {mrpc,qqp}; do
         --verbose \
 	--padding_side left \
 	--take_final \
+        $LORA_FLAG \
+        --lora_rank $LORA_RANK \
+        --lora_alpha $LORA_ALPHA \
+        --lora_dropout $LORA_DROPOUT \
+        --lora_targets "$LORA_TARGETS" \
         $WANDB_FLAG
 done
 
@@ -171,4 +218,9 @@ python -m evaluation_pipeline.finetune.run \
     --verbose \
     --padding_side left \
     --take_final \
+    $LORA_FLAG \
+    --lora_rank $LORA_RANK \
+    --lora_alpha $LORA_ALPHA \
+    --lora_dropout $LORA_DROPOUT \
+    --lora_targets "$LORA_TARGETS" \
     $WANDB_FLAG

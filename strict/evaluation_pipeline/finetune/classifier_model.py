@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 from typing import TYPE_CHECKING, Any
-from transformers import AutoModel, AutoConfig
+from transformers import AutoModel, AutoConfig, AutoModelForCausalLM
 from transformers.modeling_outputs import ModelOutput
 
 if TYPE_CHECKING:
@@ -56,6 +56,36 @@ class ClassifierHead(nn.Module):
         return self.nonlinearity(encodings)
 
 
+class LoRALinear(nn.Module):
+
+    def __init__(self: LoRALinear, base: nn.Linear, rank: int, alpha: float, dropout: float) -> None:
+        super().__init__()
+        self.base = base
+        self.base.weight.requires_grad = False
+        if self.base.bias is not None:
+            self.base.bias.requires_grad = False
+        self.lora_a = nn.Linear(base.in_features, rank, bias=False)
+        self.lora_b = nn.Linear(rank, base.out_features, bias=False)
+        self.dropout = nn.Dropout(dropout)
+        self.scale = alpha / rank
+        nn.init.kaiming_uniform_(self.lora_a.weight, a=5 ** 0.5)
+        nn.init.zeros_(self.lora_b.weight)
+
+    def forward(self: LoRALinear, x: torch.Tensor) -> torch.Tensor:
+        return self.base(x) + self.lora_b(self.lora_a(self.dropout(x))) * self.scale
+
+
+def apply_lora(module: nn.Module, targets: set[str], rank: int, alpha: float, dropout: float) -> int:
+    applied = 0
+    for name, child in list(module.named_children()):
+        if isinstance(child, nn.Linear) and name in targets:
+            setattr(module, name, LoRALinear(child, rank, alpha, dropout))
+            applied += 1
+        else:
+            applied += apply_lora(child, targets, rank, alpha, dropout)
+    return applied
+
+
 class ModelForSequenceClassification(nn.Module):
 
     def __init__(self: ModelForSequenceClassification, config: Namespace) -> None:
@@ -72,7 +102,16 @@ class ModelForSequenceClassification(nn.Module):
                 last token to the classification head.
         """
         super().__init__()
-        self.transformer: nn.Module = AutoModel.from_pretrained(config.model_name_or_path, trust_remote_code=True, revision=config.revision_name)
+        try:
+            self.transformer: nn.Module = AutoModel.from_pretrained(config.model_name_or_path, trust_remote_code=True, revision=config.revision_name)
+        except ValueError:
+            self.transformer = AutoModelForCausalLM.from_pretrained(config.model_name_or_path, trust_remote_code=True, revision=config.revision_name)
+        if config.lora:
+            for param in self.transformer.parameters():
+                param.requires_grad = False
+            targets = {target.strip() for target in config.lora_targets.split(",") if target.strip()}
+            if apply_lora(self.transformer, targets, config.lora_rank, config.lora_alpha, config.lora_dropout) == 0:
+                raise ValueError(f"LoRA enabled but no Linear modules matched targets: {sorted(targets)}")
         self.enc_dec: bool = config.enc_dec
         self.three_d_triangular_causal_mask: bool = config.three_d_triangular_causal_mask
         model_config = AutoConfig.from_pretrained(config.model_name_or_path, trust_remote_code=True, revision=config.revision_name)
@@ -108,16 +147,16 @@ class ModelForSequenceClassification(nn.Module):
             decoder_attention_mask = attention_mask.new_ones((batch_size, 1))
             output_transformer: Any = self.transformer(input_ids=input_data, attention_mask=attention_mask, decoder_input_ids=decoder_input_ids, decoder_attention_mask=decoder_attention_mask)
         else:
-            output_transformer = self.transformer(input_ids=input_data, attention_mask=attention_mask)
+            output_transformer = self.transformer(input_ids=input_data, attention_mask=attention_mask, output_hidden_states=True)
         if type(output_transformer) is tuple:
             encoding: torch.Tensor = output_transformer[0]
         elif isinstance(output_transformer, ModelOutput):
-            if hasattr(output_transformer, "logits"):
+            if hasattr(output_transformer, "hidden_states") and output_transformer.hidden_states is not None:
+                encoding = output_transformer.hidden_states[-1]
+            elif hasattr(output_transformer, "logits"):
                 encoding = output_transformer.logits
             elif hasattr(output_transformer, "last_hidden_state"):
                 encoding = output_transformer.last_hidden_state
-            elif hasattr(output_transformer, "hidden_states"):
-                encoding = output_transformer.hidden_states[-1]
             else:
                 print("Unknown name for output of the model!")
                 exit()
