@@ -1,8 +1,0 @@
-# eval outputs (generated, not source)
-results/
-models/
-logs/
-plots/
-results_dynamics.csv
-eval_targets.txt
-*.bak
