@@ -141,7 +141,7 @@ class Dataset(torch.utils.data.Dataset):
             labels.append(label)
 
         labels = torch.tensor(labels, dtype=torch.long)
-        encodings = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
+        encodings = tokenizer(texts, return_tensors="pt", padding="max_length", truncation=True, max_length=max_length)
 
         if three_d_triangular_causal_mask:
             attention_mask = encodings.attention_mask.unsqueeze(1).repeat(1, encodings.attention_mask.size(-1), 1).tril(diagonal=0)
@@ -272,7 +272,7 @@ class PredictDataset(torch.utils.data.Dataset):
         for text in data:
             texts.append(text)
 
-        encodings = tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
+        encodings = tokenizer(texts, return_tensors="pt", padding="max_length", truncation=True, max_length=max_length)
 
         if three_d_triangular_causal_mask:
             attention_mask = encodings.attention_mask.unsqueeze(1).repeat(1, encodings.attention_mask.size(-1), 1).tril(diagonal=0)
