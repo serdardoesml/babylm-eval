@@ -14,6 +14,8 @@ BIG_BSZ=16
 MAX_EPOCHS=10
 WSC_EPOCHS=30
 SEED=42
+SEQUENCE_LENGTH=512
+COMPILE_FLAG="--compile"
 LORA_RANK=256
 LORA_ALPHA=512
 LORA_DROPOUT=0.0
@@ -51,6 +53,18 @@ while [[ $# -gt 0 ]]; do
         --seed)
             SEED="$2"
             shift 2
+            ;;
+        --sequence_length)
+            SEQUENCE_LENGTH="$2"
+            shift 2
+            ;;
+        --compile)
+            COMPILE_FLAG="--compile"
+            shift
+            ;;
+        --no_compile|--no-compile)
+            COMPILE_FLAG="--no-compile"
+            shift
             ;;
         --lora_rank)
             LORA_RANK="$2"
@@ -96,7 +110,7 @@ for task in {boolq,multirc}; do
         --batch_size $BIG_BSZ \
         --learning_rate $LR \
         --num_epochs $MAX_EPOCHS \
-        --sequence_length 512 \
+        --sequence_length $SEQUENCE_LENGTH \
         --results_dir "results" \
         --save \
         --save_dir "models" \
@@ -106,6 +120,7 @@ for task in {boolq,multirc}; do
         --verbose \
         --padding_side left \
         --take_final \
+        $COMPILE_FLAG \
         $LORA_FLAG \
         --lora_rank $LORA_RANK \
         --lora_alpha $LORA_ALPHA \
@@ -124,7 +139,7 @@ python -m evaluation_pipeline.finetune.run \
     --batch_size $BSZ \
     --learning_rate $LR \
     --num_epochs $MAX_EPOCHS \
-    --sequence_length 512 \
+    --sequence_length $SEQUENCE_LENGTH \
     --results_dir "results" \
     --save \
     --save_dir "models" \
@@ -134,6 +149,7 @@ python -m evaluation_pipeline.finetune.run \
     --verbose \
     --padding_side left \
     --take_final \
+    $COMPILE_FLAG \
     $LORA_FLAG \
     --lora_rank $LORA_RANK \
     --lora_alpha $LORA_ALPHA \
@@ -151,7 +167,7 @@ python -m evaluation_pipeline.finetune.run \
     --batch_size $BSZ \
     --learning_rate $LR \
     --num_epochs $WSC_EPOCHS \
-    --sequence_length 512 \
+    --sequence_length $SEQUENCE_LENGTH \
     --results_dir "results" \
     --save \
     --save_dir "models" \
@@ -161,6 +177,7 @@ python -m evaluation_pipeline.finetune.run \
     --verbose \
     --padding_side left \
     --take_final \
+    $COMPILE_FLAG \
     $LORA_FLAG \
     --lora_rank $LORA_RANK \
     --lora_alpha $LORA_ALPHA \
@@ -180,7 +197,7 @@ for task in {mrpc,qqp}; do
         --batch_size $BSZ \
         --learning_rate $LR \
         --num_epochs $MAX_EPOCHS \
-        --sequence_length 512 \
+        --sequence_length $SEQUENCE_LENGTH \
         --results_dir "results" \
         --save \
         --save_dir "models" \
@@ -190,6 +207,7 @@ for task in {mrpc,qqp}; do
         --verbose \
 	--padding_side left \
 	--take_final \
+        $COMPILE_FLAG \
         $LORA_FLAG \
         --lora_rank $LORA_RANK \
         --lora_alpha $LORA_ALPHA \
@@ -208,7 +226,7 @@ python -m evaluation_pipeline.finetune.run \
     --batch_size $BSZ \
     --learning_rate $LR \
     --num_epochs $MAX_EPOCHS \
-    --sequence_length 512 \
+    --sequence_length $SEQUENCE_LENGTH \
     --results_dir "results" \
     --save \
     --save_dir "models" \
@@ -218,6 +236,7 @@ python -m evaluation_pipeline.finetune.run \
     --verbose \
     --padding_side left \
     --take_final \
+    $COMPILE_FLAG \
     $LORA_FLAG \
     --lora_rank $LORA_RANK \
     --lora_alpha $LORA_ALPHA \

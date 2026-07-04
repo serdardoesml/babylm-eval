@@ -57,6 +57,7 @@ class Trainer():
         """
         self.args: Namespace = args
         self.device: torch.device = device
+        self.compiled_models = {}
         self._init_model()
         self.load_data()
         self.global_step: int = 0
@@ -83,6 +84,14 @@ class Trainer():
         self.model.to(self.device)
         self.ema_model.to(self.device)
         self.tokenizer: PreTrainedTokenizerBase = AutoProcessor.from_pretrained(self.args.model_name_or_path, trust_remote_code=True, padding_side=self.args.padding_side)
+
+    def _call_model(self: Trainer, model: nn.Module, input_data: torch.Tensor, attention_mask: torch.Tensor | None) -> torch.Tensor:
+        if not self.args.compile:
+            return model(input_data, attention_mask)
+        key = id(model)
+        if key not in self.compiled_models:
+            self.compiled_models[key] = torch.compile(model)
+        return self.compiled_models[key](input_data, attention_mask)
 
     def load_data(self: Trainer) -> None:
         """This function loads the data and creates the
@@ -152,7 +161,7 @@ class Trainer():
             attention_mask = attention_mask.to(device=self.device)
             labels = labels.to(device=self.device)
 
-            logits = self.model(input_data, attention_mask)
+            logits = self._call_model(self.model, input_data, attention_mask)
 
             # Divide by gradient_accumulation so the accumulated gradient matches
             # the mean loss over the full effective batch rather than N times it.
@@ -227,7 +236,7 @@ class Trainer():
             attention_mask = attention_mask.to(device=self.device)
             label = label.to(device=self.device)
 
-            logit = model(input_data, attention_mask)
+            logit = self._call_model(model, input_data, attention_mask)
 
             logits.append(logit)
             labels.append(label)
@@ -374,7 +383,7 @@ class Trainer():
             input_data = input_data.to(device=self.device)
             attention_mask = attention_mask.to(device=self.device)
 
-            logit = model(input_data, attention_mask)
+            logit = self._call_model(model, input_data, attention_mask)
 
             logits.append(logit)
 

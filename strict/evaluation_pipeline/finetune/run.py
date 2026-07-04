@@ -60,6 +60,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--3D-triangular-causal-mask", dest="three_d_triangular_causal_mask", default=False, action=argparse.BooleanOptionalAction, help="Whether to build a 3D lower-triangular causal attention mask during collation (required for per-example last-non-pad pooling with take_final).")
     parser.add_argument("--take_final", default=False, action=argparse.BooleanOptionalAction, help="Whether to take the last token rather than the first one.")
     parser.add_argument("--enc_dec", default=False, action=argparse.BooleanOptionalAction, help="Flag to indicate that the architecture is an encoder-decoder.")
+    parser.add_argument("--compile", default=False, action=argparse.BooleanOptionalAction, help="Whether to compile finetuning model calls with torch.compile.")
     parser.add_argument("--lora", default=True, action=argparse.BooleanOptionalAction, help="Whether to fine-tune LoRA adapters instead of the full transformer.")
     parser.add_argument("--lora_rank", default=256, type=int, help="LoRA adapter rank.")
     parser.add_argument("--lora_alpha", default=512, type=float, help="LoRA scaling alpha.")
