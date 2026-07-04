@@ -91,6 +91,9 @@ class Trainer():
         key = id(model)
         if key not in self.compiled_models:
             self.compiled_models[key] = torch.compile(model)
+        if self.device.type == "cuda":
+            with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                return self.compiled_models[key](input_data, attention_mask)
         return self.compiled_models[key](input_data, attention_mask)
 
     def load_data(self: Trainer) -> None:
