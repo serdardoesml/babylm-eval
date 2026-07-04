@@ -11,6 +11,7 @@ fi
 # Default values
 MODEL_PATH=""
 LR=3e-5
+WEIGHT_DECAY=0.1
 BSZ=32
 BIG_BSZ=16
 MAX_EPOCHS=10
@@ -34,6 +35,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --lr)
             LR="$2"
+            shift 2
+            ;;
+        --weight_decay)
+            WEIGHT_DECAY="$2"
             shift 2
             ;;
         --bsz)
@@ -111,6 +116,7 @@ for task in {boolq,multirc}; do
         --num_labels 2 \
         --batch_size $BIG_BSZ \
         --learning_rate $LR \
+        --weight_decay $WEIGHT_DECAY \
         --num_epochs $MAX_EPOCHS \
         --sequence_length $SEQUENCE_LENGTH \
         --results_dir "results" \
@@ -140,6 +146,7 @@ python -m evaluation_pipeline.finetune.run \
     --num_labels 2 \
     --batch_size $BSZ \
     --learning_rate $LR \
+    --weight_decay $WEIGHT_DECAY \
     --num_epochs $MAX_EPOCHS \
     --sequence_length $SEQUENCE_LENGTH \
     --results_dir "results" \
@@ -168,6 +175,7 @@ python -m evaluation_pipeline.finetune.run \
     --num_labels 2 \
     --batch_size $BSZ \
     --learning_rate $LR \
+    --weight_decay $WEIGHT_DECAY \
     --num_epochs $WSC_EPOCHS \
     --sequence_length $SEQUENCE_LENGTH \
     --results_dir "results" \
@@ -198,6 +206,7 @@ for task in {mrpc,qqp}; do
         --num_labels 2 \
         --batch_size $BSZ \
         --learning_rate $LR \
+        --weight_decay $WEIGHT_DECAY \
         --num_epochs $MAX_EPOCHS \
         --sequence_length $SEQUENCE_LENGTH \
         --results_dir "results" \
@@ -227,6 +236,7 @@ python -m evaluation_pipeline.finetune.run \
     --num_labels 3 \
     --batch_size $BSZ \
     --learning_rate $LR \
+    --weight_decay $WEIGHT_DECAY \
     --num_epochs $MAX_EPOCHS \
     --sequence_length $SEQUENCE_LENGTH \
     --results_dir "results" \
