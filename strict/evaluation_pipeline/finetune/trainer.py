@@ -85,8 +85,8 @@ class Trainer():
         self.ema_model.to(self.device)
         self.tokenizer: PreTrainedTokenizerBase = AutoProcessor.from_pretrained(self.args.model_name_or_path, trust_remote_code=True, padding_side=self.args.padding_side)
 
-    def _call_model(self: Trainer, model: nn.Module, input_data: torch.Tensor, attention_mask: torch.Tensor | None) -> torch.Tensor:
-        if not self.args.compile:
+    def _call_model(self: Trainer, model: nn.Module, input_data: torch.Tensor, attention_mask: torch.Tensor | None, compile_model: bool = True) -> torch.Tensor:
+        if not self.args.compile or not compile_model:
             return model(input_data, attention_mask)
         key = id(model)
         if key not in self.compiled_models:
@@ -239,7 +239,7 @@ class Trainer():
             attention_mask = attention_mask.to(device=self.device)
             label = label.to(device=self.device)
 
-            logit = self._call_model(model, input_data, attention_mask)
+            logit = self._call_model(model, input_data, attention_mask, compile_model=False)
 
             logits.append(logit)
             labels.append(label)
@@ -386,7 +386,7 @@ class Trainer():
             input_data = input_data.to(device=self.device)
             attention_mask = attention_mask.to(device=self.device)
 
-            logit = self._call_model(model, input_data, attention_mask)
+            logit = self._call_model(model, input_data, attention_mask, compile_model=False)
 
             logits.append(logit)
 
