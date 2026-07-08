@@ -47,7 +47,7 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-from transformers.utils import check_min_version, send_example_telemetry
+from transformers.utils import check_min_version
 from transformers.utils.versions import require_version
 
 
@@ -253,10 +253,6 @@ def main():
     else:
         callbacks = None
 
-    # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
-    # information sent is the one passed as arguments along with your Python/PyTorch versions.
-    send_example_telemetry("run_glue", model_args, data_args)
-
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -416,6 +412,12 @@ def main():
         trust_remote_code=True,
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
     )
+
+    # GPT-2-style tokenizers ship without a pad token; fall back to EOS so the
+    # tokenizer-level padding used during preprocessing works. Models whose
+    # tokenizer already defines a pad token are unaffected.
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     model.config.pad_token_id = tokenizer.eos_token_id
 

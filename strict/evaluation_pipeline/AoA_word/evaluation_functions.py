@@ -171,7 +171,9 @@ class StepSurprisalExtractor:
             input_text = context + target_word
 
         # Tokenize overall context
-        tokenizer_output = processor(text=input_text, return_offsets_mapping=True)
+        # BOS-only prepends its own bos_token, so suppress the tokenizer's auto BOS/EOS
+        # to avoid a doubled BOS; the context path keeps the auto specials.
+        tokenizer_output = processor(text=input_text, return_offsets_mapping=True, add_special_tokens=not use_bos_only)
         start_char_idx = len(input_text) - len(target_word)
         offset_mapping = tokenizer_output["offset_mapping"]
 
@@ -250,7 +252,9 @@ class StepSurprisalExtractor:
         else:
             prepend = 0
 
-        tokenizer_output = processor(text=input_text, return_offsets_mapping=True)
+        # BOS-only prepends its own bos_token, so suppress the tokenizer's auto BOS/EOS
+        # to avoid a doubled BOS; the context path keeps the auto specials.
+        tokenizer_output = processor(text=input_text, return_offsets_mapping=True, add_special_tokens=not use_bos_only)
         tokens = tokenizer_output["input_ids"]
         attention_mask = tokenizer_output["attention_mask"]
 
@@ -334,7 +338,9 @@ class StepSurprisalExtractor:
             input_text = context + target_word
         mask_index = tokenizer.mask_token_id
 
-        tokenizer_output = processor(text=input_text, return_offsets_mapping=True)
+        # BOS-only prepends its own bos_token, so suppress the tokenizer's auto BOS/EOS
+        # to avoid a doubled BOS; the context path keeps the auto specials.
+        tokenizer_output = processor(text=input_text, return_offsets_mapping=True, add_special_tokens=not use_bos_only)
         tokens = tokenizer_output["input_ids"]
         attention_mask = tokenizer_output["attention_mask"]
 
@@ -437,7 +443,7 @@ class StepSurprisalExtractor:
             else:
                 raise "Unknown BOS token, please specify it in the tokenizer!"
 
-        tokenizer_output = processor(input_text, return_offsets_mapping=True)
+        tokenizer_output = processor(input_text, return_offsets_mapping=True, add_special_tokens=not use_bos_only)
         tokens = tokenizer_output["input_ids"]
         attention_mask = tokenizer_output["attention_mask"]
 

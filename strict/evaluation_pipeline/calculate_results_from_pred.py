@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 import statsmodels.formula.api as smf
 
+from transformers import AutoTokenizer
+
 from utils import AoAEvaluator
 
 
@@ -248,12 +250,14 @@ def _calculate_glue_results(
 
 
 def _calculate_aoa_results(
-    results_dict: dict[str, dict[str, list[dict[str, int]]]], cdi_data_path: Path
+    results_dict: dict[str, dict[str, list[dict[str, int]]]],
+    cdi_data_path: Path,
+    tokenizer,
 ) -> dict[str, float]:
-    # Initialize evaluator
     evaluator = AoAEvaluator(cdi_data_path)
-    # Compute curve fitness
-    fitness_results = evaluator.compute_curve_fitness(results_dict)
+    # random-chance ceiling is n_subword_tokens * ln(vocab_size), so the evaluator needs
+    # the model's tokenizer for subword lengths and vocab size.
+    fitness_results = evaluator.compute_curve_fitness(results_dict, tokenizer=tokenizer)
     return fitness_results["curve_fitness"]
 
 
@@ -337,7 +341,10 @@ if __name__ == "__main__":
         )
         print(f"GLUE\t\t{score:.2f}")
         # AoA
+        aoa_tokenizer = AutoTokenizer.from_pretrained(
+            args.model_path_or_name, revision=args.revision_name, trust_remote_code=True
+        )
         score = _calculate_aoa_results(
-            all_results["aoa"], evaluation_path / "aoa" / "cdi_human.csv"
+            all_results["aoa"], evaluation_path / "aoa" / "cdi_human.csv", aoa_tokenizer
         )
         print(f"AoA\t\t{score:.2f}")

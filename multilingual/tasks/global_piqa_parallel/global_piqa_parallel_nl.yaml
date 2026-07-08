@@ -1,0 +1,3 @@
+include: global_piqa_parallel_en.yaml
+task: global_piqa_parallel_nl
+dataset_name: nld_latn

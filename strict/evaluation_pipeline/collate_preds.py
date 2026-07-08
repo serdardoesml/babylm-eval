@@ -18,7 +18,7 @@ OTHER_FAST_REVISIONS = [f"chck_{i}M" for i in range(1, 10)] + [f"chck_{i*10}M" f
 BLIMP_FAST_SIZE = 200
 SUPPLEMENT_FAST_SIZE = 50
 EWOK_FAST_SIZE = 100
-ENTITY_TRACKING_FAST_SIZE = {"regular_0_ops": 606, "regular_1_ops": 607, "regular_2_ops": 606, "regular_3_ops": 606, "regular_4_ops": 568, "regular_5_ops": 159}
+ENTITY_TRACKING_FAST_SIZE = {"regular_0_ops": 517, "regular_1_ops": 409, "regular_2_ops": 405, "regular_3_ops": 425, "regular_4_ops": 388, "regular_5_ops": 94}
 
 READING_SIZE = 1726
 
@@ -115,24 +115,24 @@ EWOK_SIZES = {
 }
 
 ENTITY_TRACKING_SIZES = {
-    "regular_0_ops": 606,
-    "regular_1_ops": 607,
-    "regular_2_ops": 606,
-    "regular_3_ops": 606,
-    "regular_4_ops": 568,
-    "regular_5_ops": 159,
-    "ambiref_0_ops": 607,
-    "ambiref_1_ops": 607,
-    "ambiref_2_ops": 604,
-    "ambiref_3_ops": 604,
-    "ambiref_4_ops": 615,
-    "ambiref_5_ops": 187,
-    "move_contents_0_ops": 605,
-    "move_contents_1_ops": 606,
-    "move_contents_2_ops": 605,
-    "move_contents_3_ops": 606,
-    "move_contents_4_ops": 529,
-    "move_contents_5_ops": 156
+    "regular_0_ops": 517,
+    "regular_1_ops": 409,
+    "regular_2_ops": 405,
+    "regular_3_ops": 425,
+    "regular_4_ops": 388,
+    "regular_5_ops": 94,
+    "ambiref_0_ops": 508,
+    "ambiref_1_ops": 428,
+    "ambiref_2_ops": 413,
+    "ambiref_3_ops": 409,
+    "ambiref_4_ops": 434,
+    "ambiref_5_ops": 123,
+    "move_contents_0_ops": 516,
+    "move_contents_1_ops": 437,
+    "move_contents_2_ops": 399,
+    "move_contents_3_ops": 406,
+    "move_contents_4_ops": 353,
+    "move_contents_5_ops": 116
 }
 COMPS_SIZES = {
     "base": 49340,
@@ -140,6 +140,9 @@ COMPS_SIZES = {
     "wugs_dist_in_between": 13896,
     "wugs": 13896,
 }
+# Global PIQA predictions are keyed by example_id (one prediction each), so the
+# value is the total number of examples rather than a per-subtask size dict.
+GLOBAL_PIQA_SIZES = {"global_piqa_parallel": 103, "global_piqa_nonparallel": 100}
 BOOLQ_SIZE = 1635
 MNLI_SIZE = 4908
 MRPC_SIZE = 204
@@ -225,6 +228,12 @@ def _check_validity_of_dir(args: argparse.Namespace, revision_name: str, fast: b
         if not (zero_shot_path / "entity_tracking" / "entity_tracking_fast" / "predictions.json").exists():
             print("The entity tracking data is missing!")
             valid = False
+        if not (zero_shot_path / "global_piqa_parallel" / "global_piqa_parallel" / "predictions.json").exists():
+            print("The global_piqa_parallel data is missing!")
+            valid = False
+        if not (zero_shot_path / "global_piqa_nonparallel" / "global_piqa_nonparallel" / "predictions.json").exists():
+            print("The global_piqa_nonparallel data is missing!")
+            valid = False
         if not (zero_shot_path / "reading" / "predictions.json").exists():
             print("The reading data is missing!")
             valid = False
@@ -264,6 +273,12 @@ def _check_validity_of_dir(args: argparse.Namespace, revision_name: str, fast: b
             valid = False
         if not (zero_shot_path / "comps" / "comps" / "predictions.json").exists():
             print("The comps data is missing!")
+            valid = False
+        if not (zero_shot_path / "global_piqa_parallel" / "global_piqa_parallel" / "predictions.json").exists():
+            print("The global_piqa_parallel data is missing!")
+            valid = False
+        if not (zero_shot_path / "global_piqa_nonparallel" / "global_piqa_nonparallel" / "predictions.json").exists():
+            print("The global_piqa_nonparallel data is missing!")
             valid = False
         if not (zero_shot_path / "reading" / "predictions.json").exists():
             print("The reading data is missing!")
@@ -315,6 +330,19 @@ def _check_size(task: str, results: dict[str, dict[str, list[dict[str, str | int
                     valid = False
                     print(f"The sub-data {key} from {task} has {len(res['predictions'])} datapoints, when it should have {FULL_SIZES[task]} datapoints!")
     return valid
+
+
+def _check_size_global_piqa(task: str, results: dict[str, dict[str, list[dict[str, str]]]]) -> bool:
+    # Global PIQA predictions are keyed by example_id, with exactly one prediction per example.
+    expected = GLOBAL_PIQA_SIZES[task]
+    if len(results) != expected:
+        print(f"The {task} data has {len(results)} examples, when it should have {expected}!")
+        return False
+    for key, res in results.items():
+        if len(res["predictions"]) != 1:
+            print(f"The example {key} from {task} has {len(res['predictions'])} predictions, when it should have 1!")
+            return False
+    return True
 
 
 def _check_size_aoa(args, results):
@@ -411,17 +439,24 @@ def collate_full_eval_preds(args):
     # EWoK
     full_results["ewok"] = _try_load_results(zero_main_path / "ewok" / "ewok_filtered" / "predictions.json", "EWoK", lambda r: _check_size("ewok", r, False))
 
-    # Entity Tracking
-    full_results["entity_tracking"] = _try_load_results(zero_main_path / "entity_tracking" / "entity_tracking" / "predictions.json", "Entity Tracking", lambda r: _check_size("entity_tracking", r, False))
+    # Entity Tracking. Saved under "entity_tracking_filtered" because the predictions
+    # already have "nothing"-answer datapoints dropped at generation time; the leaderboard
+    # filters the gold identically (skip_nothing_targets) when scoring this key.
+    full_results["entity_tracking_filtered"] = _try_load_results(zero_main_path / "entity_tracking" / "entity_tracking" / "predictions.json", "Entity Tracking", lambda r: _check_size("entity_tracking", r, False))
 
     # COMPS
     full_results["comps"] = _try_load_results(zero_main_path / "comps" / "comps" / "predictions.json", "COMPS", lambda r: _check_size("comps", r, False))
+
+    # Global PIQA
+    full_results["global_piqa_parallel"] = _try_load_results(zero_main_path / "global_piqa_parallel" / "global_piqa_parallel" / "predictions.json", "Global PIQA Parallel", lambda r: _check_size_global_piqa("global_piqa_parallel", r))
+    full_results["global_piqa_nonparallel"] = _try_load_results(zero_main_path / "global_piqa_nonparallel" / "global_piqa_nonparallel" / "predictions.json", "Global PIQA Nonparallel", lambda r: _check_size_global_piqa("global_piqa_nonparallel", r))
 
     # Reading
     full_results["reading"] = _try_load_results(zero_main_path / "reading" / "predictions.json", "Reading", lambda r: _check_size("reading", r, False))
 
     # AoA
-    full_results["aoa"] = _try_load_results(zero_main_path / "AoA_word" / "surprisal.json", "AoA word", lambda r: _check_size_aoa(args, r))
+    full_results["aoa_surprisals"] = _try_load_results(zero_main_path / "AoA_word" / "surprisal.json", "AoA word", lambda r: _check_size_aoa(args, r))
+    full_results["aoa"] = _try_load_results(zero_main_path / "AoA_word" / "aoa_score.json", "AoA score")
 
     # GLUE
     full_results["glue"] = {}
@@ -486,7 +521,8 @@ def collate_full_eval_preds(args):
 def get_fast_eval_metrics(args):
     fast_eval_results = {
         "blimp" : [], "blimp_supplement" : [], "ewok" : [],
-        "entity_tracking" : [], "reading" : []
+        "entity_tracking_filtered" : [], "global_piqa_parallel" : [], "global_piqa_nonparallel" : [],
+        "reading" : []
     }
     revision_list = STRICT_SMALL_FAST_REVISIONS if args.track == "strict-small" else OTHER_FAST_REVISIONS
     for revision_name in revision_list:
@@ -515,7 +551,14 @@ def get_revision_fast_eval_metrics(args, revision_name):
 
     # Entity Tracking
     et_results = _try_load_results(main_path / "entity_tracking" / "entity_tracking_fast" / "predictions.json", "Entity Tracking Fast", lambda r: _check_size("entity_tracking", r, True))
-    revision_results["entity_tracking"] = _calculate_target_et_results(et_results, data_path / "entity_tracking_fast") if et_results is not None else None
+    revision_results["entity_tracking_filtered"] = _calculate_target_et_results(et_results, data_path / "entity_tracking_fast") if et_results is not None else None
+
+    # Global PIQA. The fast subset is identical to the full data (Global PIQA is
+    # not subsampled), but it lives under its own fast_eval folder like every
+    # other fast task, so the gold labels are read from data_path (fast_eval_dir).
+    for gp_task in ("global_piqa_parallel", "global_piqa_nonparallel"):
+        gp_results = _try_load_results(main_path / gp_task / gp_task / "predictions.json", f"{gp_task} Fast", lambda r, t=gp_task: _check_size_global_piqa(t, r))
+        revision_results[gp_task] = _calculate_global_piqa_results(gp_results, data_path / gp_task / "eng_latn.jsonl", gp_task) if gp_results is not None else None
 
     # Reading
     read_results = _try_load_results(main_path / "reading" / "predictions.json", "Reading Fast", lambda r: _check_size("reading", r, True))
@@ -549,6 +592,10 @@ def _calculate_target_et_results(results_dict: dict[str, dict[str, list[dict[str
     with (path_to_data / "regular").with_suffix(".jsonl").open("r") as data_file:
         for data in data_file.readlines():
             data = json.loads(data)
+            # Skip datapoints with a "nothing" option, matching the filtering
+            # applied when the predictions were generated (see read_files.py).
+            if any("nothing" in option for option in data["options"]):
+                continue
             subtask_to_targets[f'regular_{data["numops"]}_ops'].append(data)
 
     for subtask in results_dict.keys():
@@ -564,6 +611,24 @@ def _calculate_target_et_results(results_dict: dict[str, dict[str, list[dict[str
                 correct += 1
         processed_results[subtask] = correct / total
     return processed_results
+
+
+def _calculate_global_piqa_results(results_dict: dict[str, dict[str, list[dict[str, str]]]], path_to_data: Path, task: str) -> dict[str, float]:
+    # Predictions are keyed by example_id and store the chosen completion *text*
+    # (" " + solution), not its index, so correctness is determined by comparing
+    # against the gold solution (solution{label}) read from the full_eval data.
+    correct = 0
+    total = 0
+    with path_to_data.open("r") as data_file:
+        for line in data_file.readlines():
+            data = json.loads(line)
+            example_id = data["example_id"]
+            pred = results_dict[example_id]["predictions"][0]["pred"]
+            target = data[f"solution{data['label']}"]
+            total += 1
+            if pred.strip() == target.strip():
+                correct += 1
+    return {task: correct / total}
 
 
 def _calculate_reading_results(results_dict: dict[str, dict[str, list[dict[str, int | float]]]], path_to_data: Path) -> dict[str, float]:

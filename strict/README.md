@@ -6,6 +6,24 @@ This code provides the backend for evaluating models participating in the Strict
 
 An addition from last year that we keep is that we have two evaluation types: **fast** evaluation uses a smaller set of evaluation samples, allows for quick testing of your models, and is what you will report performance on for the intermediate model checkpoints. The **full** evaluation should be run on your final model.
 
+## Hidden Tasks
+
+### GlobalPIQA
+
+[GlobalPIQA](https://huggingface.co/datasets/mrlbenchmarks/global-piqa-parallel) is a cultural commonsense-reasoning benchmark containing questions in a broad diversity of languages. For each language, GlobalPIQA contains a culture-specific "non-parallel" and shared, culture-agnostic "parallel" split. As the Strict and Strict-Small tracks only train on English data, we restrict our attention to the subset of English (`eng_latn`) questions. We use cloze-style evaluation, where completions are chosen using length-normalized conditional log-probabilties.
+
+To set up and run the evaluation:
+
+1. First download the dataset. From the `strict` directory, run the dedicated download script, which fetches the `eng_latn` parallel and nonparallel subsets into both `evaluation_data/full_eval` and `evaluation_data/fast_eval` (Global PIQA is not subsampled, so the fast subset is identical to the full data):
+   ```bash
+   python evaluation_pipeline/global_piqa/dl.py
+   ```
+2. Use the dedicated shell script under `scripts/` to evaluate both your final submission checkpoint and all intermediate (revision) checkpoints. The final checkpoint is scored against `eval_dir` (full_eval) and the intermediate checkpoints against `fast_eval_dir` (fast_eval):
+   ```bash
+   bash scripts/eval_zero_shot_global_piqa.sh <path_to_model> <architecture (causal/mntp/mlm/enc_dec_mask/enc_dec_prefix)> <track (strict/strict-small)> <eval_dir (optional, default:evaluation_data/full_eval)> <fast_eval_dir (optional, default:evaluation_data/fast_eval)>
+   ```
+   As with `eval_zero_shot_fast_all_revisions.sh`, edit the checkpoint for-loops in the script if your revision naming scheme differs from the `chck_<N>M` convention. The standard collation script should then be used to collate these new results.
+
 ## Tasks
 
 - **Entity Tracking in Language Models** [(Kim & Schuster, 2023)](https://aclanthology.org/2023.acl-long.213/) - *Tests entity state tracking in LMs. Note: We have changed the evaluation of this task to evaluate LMs' ability to assign the highest probability to the correct continuation (akin to BLiMP and EWoK) rather than generate the correct completion itself as was originally done, to allow for simpler, zero-shot evaluation.*

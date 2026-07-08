@@ -14,6 +14,11 @@ import argparse
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+# Tasks whose candidates are scored by length-normalized completion log-probability
+# (sum of completion-token log-probs divided by the number of completion tokens)
+# rather than the raw summed completion log-probability used by every other task.
+LENGTH_NORMALIZED_TASKS = {"global_piqa_parallel", "global_piqa_nonparallel"}
+
 
 def compute_results(args: argparse.ArgumentParser, model: torch.nn.Module, dataloader: DataLoader, temperatures: list[float]):
     """This function takes as input a model, a dataloader for a given evaluation task and
@@ -120,7 +125,10 @@ def compute_causal_results(args, model, dataloader, temperatures):
             for temp in subset_to_stats:
                 log_probs = F.log_softmax(logits / temp, dim=-1)
                 target_log_probs = torch.gather(log_probs, -1, sentence_dict[f"{prefix}_targets"].to(DEVICE).unsqueeze(-1)).squeeze(-1)
-                phrase_log_probs = torch.sum(target_log_probs * sentence_dict[f"{prefix}_phrase_mask"].to(DEVICE), dim=1)
+                phrase_mask = sentence_dict[f"{prefix}_phrase_mask"].to(DEVICE)
+                phrase_log_probs = torch.sum(target_log_probs * phrase_mask, dim=1)
+                if args.task in LENGTH_NORMALIZED_TASKS:
+                    phrase_log_probs = phrase_log_probs / torch.sum(phrase_mask, dim=1).clamp(min=1)
                 all_log_probs[temp].append(phrase_log_probs.cpu())
 
         rank_and_evaluate(args, subset_to_stats, all_log_probs, raw_sentences, labels, metadatas, uids, predictions)
@@ -202,7 +210,10 @@ def compute_mlm_results(args, model, dataloader, temperatures):
                 for examples_per_batch in sentence_dict[f'{prefix}_examples_per_batch']:
                     start_idx = curr_idx
                     end_idx = curr_idx + examples_per_batch
-                    summed_log_probs.append(torch.sum(concat_temp_log_probs[start_idx:end_idx]).item())
+                    example_log_prob = torch.sum(concat_temp_log_probs[start_idx:end_idx]).item()
+                    if args.task in LENGTH_NORMALIZED_TASKS:
+                        example_log_prob = example_log_prob / max(examples_per_batch, 1)
+                    summed_log_probs.append(example_log_prob)
                     curr_idx += examples_per_batch
                 all_log_probs[temp].append(torch.tensor(summed_log_probs))
 
@@ -286,7 +297,10 @@ def compute_enc_dec_mask_results(args, model, dataloader, temperatures):
                 for examples_per_batch in sentence_dict[f'{prefix}_examples_per_batch']:
                     start_idx = curr_idx
                     end_idx = curr_idx + examples_per_batch
-                    summed_log_probs.append(torch.sum(concat_temp_log_probs[start_idx:end_idx]).item())
+                    example_log_prob = torch.sum(concat_temp_log_probs[start_idx:end_idx]).item()
+                    if args.task in LENGTH_NORMALIZED_TASKS:
+                        example_log_prob = example_log_prob / max(examples_per_batch, 1)
+                    summed_log_probs.append(example_log_prob)
                     curr_idx += examples_per_batch
                 all_log_probs[temp].append(torch.tensor(summed_log_probs))
 
@@ -343,7 +357,10 @@ def compute_enc_dec_prefix_results(args, model, dataloader, temperatures):
                 log_probs = F.log_softmax(logits / temp, dim=-1)
                 start_pred_token = log_probs.size(1) - sentence_dict[f"{prefix}_targets"].size(1)
                 target_log_probs = torch.gather(log_probs[:, start_pred_token:], -1, sentence_dict[f"{prefix}_targets"].to(DEVICE).unsqueeze(-1)).squeeze(-1)
-                phrase_log_probs = torch.sum(target_log_probs * sentence_dict[f"{prefix}_phrase_mask"].to(DEVICE), dim=1)
+                phrase_mask = sentence_dict[f"{prefix}_phrase_mask"].to(DEVICE)
+                phrase_log_probs = torch.sum(target_log_probs * phrase_mask, dim=1)
+                if args.task in LENGTH_NORMALIZED_TASKS:
+                    phrase_log_probs = phrase_log_probs / torch.sum(phrase_mask, dim=1).clamp(min=1)
                 all_log_probs[temp].append(phrase_log_probs.cpu())
 
         rank_and_evaluate(args, subset_to_stats, all_log_probs, raw_sentences, labels, metadatas, uids, predictions)
