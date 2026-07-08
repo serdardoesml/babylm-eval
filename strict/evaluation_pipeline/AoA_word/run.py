@@ -6,8 +6,11 @@ from pathlib import Path
 
 import torch
 
+from transformers import AutoTokenizer
+
 from evaluation_pipeline.AoA_word.eval_util import JsonProcessor, StepConfig, load_eval
 from evaluation_pipeline.AoA_word.evaluation_functions import StepSurprisalExtractor
+from evaluation_pipeline.utils import AoAEvaluator
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -136,6 +139,16 @@ def main() -> None:
     )
 
     save_results(results_data, result_file)
+
+    cdi_human = args.word_path.parent / "cdi_human.csv"
+    if results_data.get("results") and cdi_human.is_file():
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name, trust_remote_code=True)
+        score = AoAEvaluator(cdi_human).compute_curve_fitness(results_data, tokenizer)["curve_fitness"]
+        score_file = result_file.parent / "aoa_score.json"
+        JsonProcessor.save_json({"aoa": score}, score_file)
+        logger.info(f"AoA score {score:.4f} saved to {score_file}")
+    else:
+        logger.warning(f"Skipping AoA scoring (no results, or cdi_human.csv missing at {cdi_human})")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ test_split: comps_de
 doc_to_text: ''
 doc_to_target: 0
 doc_to_choice: '{{[acceptable_sent, unacceptable_sent]}}'
+process_results: !function tie_handling.process_results
 num_fewshot: 0
 metric_list:
 - metric: acc

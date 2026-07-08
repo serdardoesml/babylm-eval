@@ -1,0 +1,21 @@
+# Pinned versions validated for the MECO evaluation (all 36 L1/L2 cells match
+# the R/lme4 reference to <= 5.1e-3 normalized_loglik). See tests/test_regression.py.
+#
+# Reference (gold) environment that produced the frozen R outputs:
+#   R 4.6.0 | lme4 2.0.1 | Matrix 1.7.5 | tidyverse 2.0.0
+# These are NOT needed to run the Python evaluation; recorded for provenance.
+
+numpy==2.2.5
+scipy==1.15.2
+pandas==2.2.3
+nlopt==2.10.0
+pyreadr==0.5.6
+wordfreq==3.1.1
+jieba==0.42.1
+minicons==0.3.38
+transformers==4.51.3
+torch==2.7.0
+tqdm==4.67.1
+
+# test-only
+pytest==9.1.1

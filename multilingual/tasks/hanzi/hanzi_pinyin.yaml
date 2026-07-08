@@ -1,0 +1,17 @@
+task: hanzi_pinyin
+dataset_path: chinese-babylm-org/hanzi-pinyin
+output_type: multiple_choice
+training_split: null
+validation_split: train
+test_split: null
+doc_to_text: ''
+doc_to_target: 0
+doc_to_choice: '{{[sentence_good, sentence_bad]}}'
+process_results: !function utils.process_results
+num_fewshot: 0
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0

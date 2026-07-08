@@ -1,0 +1,3 @@
+include: global_piqa_nonparallel_en.yaml
+task: global_piqa_nonparallel_zh
+dataset_name: cmn_hans

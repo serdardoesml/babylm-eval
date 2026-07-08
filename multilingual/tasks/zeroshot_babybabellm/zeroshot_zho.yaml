@@ -5,6 +5,8 @@ task:
   - hellaswag_zh_mubench
   - xcomps_zh
   - zhoblimp
+  - hanzi_structure
+  - hanzi_pinyin
 aggregate_metric_list:
   - metric: acc
     aggregation: mean

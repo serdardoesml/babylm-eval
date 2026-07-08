@@ -1,0 +1,10 @@
+group: global_piqa_nld
+task:
+  - global_piqa_parallel_nl
+  - global_piqa_nonparallel_nl
+aggregate_metric_list:
+  - metric: acc_norm
+    aggregation: mean
+    weight_by_size: true
+metadata:
+  version: 1.0
