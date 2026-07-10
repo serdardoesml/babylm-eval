@@ -9,7 +9,7 @@ from functools import partial
 
 import torch
 from torch.nn import functional as F
-from transformers import AutoProcessor
+from transformers import AutoProcessor, AutoTokenizer, PreTrainedTokenizerFast
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 
@@ -83,7 +83,17 @@ class Trainer():
 
         self.model.to(self.device)
         self.ema_model.to(self.device)
-        self.tokenizer: PreTrainedTokenizerBase = AutoProcessor.from_pretrained(self.args.model_name_or_path, trust_remote_code=True, padding_side=self.args.padding_side)
+        try:
+            self.tokenizer: PreTrainedTokenizerBase = AutoProcessor.from_pretrained(self.args.model_name_or_path, trust_remote_code=True, padding_side=self.args.padding_side, revision=getattr(self.args, "revision_name", None))
+        except (ValueError, OSError, KeyError):
+            # text-only models (e.g. DeBERTa) ship a tokenizer, not a Processor
+            _rev = getattr(self.args, "revision_name", None)
+            try:
+                self.tokenizer: PreTrainedTokenizerBase = AutoTokenizer.from_pretrained(self.args.model_name_or_path, trust_remote_code=True, padding_side=self.args.padding_side, revision=_rev)
+            except (ValueError, OSError, KeyError):
+                # transformers 5.x: saved tokenizer_class 'TokenizersBackend' is unregistered;
+                # load the tokenizer.json directly as a fast tokenizer.
+                self.tokenizer: PreTrainedTokenizerBase = PreTrainedTokenizerFast.from_pretrained(self.args.model_name_or_path, padding_side=self.args.padding_side, revision=_rev)
 
     def _call_model(self: Trainer, model: nn.Module, input_data: torch.Tensor, attention_mask: torch.Tensor | None, compile_model: bool = True) -> torch.Tensor:
         if not self.args.compile or not compile_model:

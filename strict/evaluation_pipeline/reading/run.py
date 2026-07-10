@@ -56,7 +56,14 @@ if __name__ == "__main__":
 
     model.to(DEVICE)
     model.eval()
-    tokenizer = AutoProcessor.from_pretrained(args.model_path_or_name, trust_remote_code=True, revision=args.revision_name)
+    try:
+        tokenizer = AutoProcessor.from_pretrained(args.model_path_or_name, trust_remote_code=True, revision=args.revision_name)
+    except (ValueError, KeyError):
+        # transformers-5.x-saved checkpoints record tokenizer_class
+        # "TokenizersBackend", unknown to 4.x. Load tokenizer.json directly.
+        from transformers import PreTrainedTokenizerFast
+        tokenizer = PreTrainedTokenizerFast.from_pretrained(
+            args.model_path_or_name, revision=args.revision_name)
 
     if args.backend == "causal":
         p2_function = get_p2

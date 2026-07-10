@@ -142,8 +142,9 @@ class AoAEvaluator:
         self,
         surprisal_data: list[float],
         training_steps: list[int],
+        vocab_size: int,
+        n_subword_tokens: int = 1,
         threshold_percentile: float = 0.5,
-        approximate_vocab: float = 300_000,
     ) -> float | None:
         """
         Compute Age of Acquisition for a word in the model.
@@ -167,9 +168,9 @@ class AoAEvaluator:
         valid_steps = steps[valid_mask]
         valid_surprisals = surprisals[valid_mask]
 
-        # Calculate random chance baseline (vocabulary size dependent)
-        # Using log2 for consistency with surprisal calculation
-        random_chance_surprisal = np.log2(approximate_vocab)
+        # Uniform-random baseline in nats. Surprisal is summed over the word's subword
+        # tokens, so the ceiling is summed too: n_subword_tokens * ln(vocab_size).
+        random_chance_surprisal = n_subword_tokens * np.log(vocab_size)
         min_surprisal = np.min(valid_surprisals)
 
         # Calculate threshold surprisal (50% between random chance and minimum)
@@ -185,27 +186,32 @@ class AoAEvaluator:
             # Use log scale for training steps
             log_steps = np.log10(valid_steps + 1)  # +1 to handle step 0
 
-            # Initial parameter guesses
+            # Bounded fit: the old unbounded maxfev=1000 fit let b blow up and failed to
+            # converge on many clean decreasing curves. Bounds + more evals recover them.
+            rng = np.max(neg_surprisals) - np.min(neg_surprisals)
             initial_guess = [
-                np.max(neg_surprisals) - np.min(neg_surprisals),  # a: range
+                rng,  # a: range
                 1.0,  # b: steepness
                 np.mean(log_steps),  # c: midpoint
                 np.min(neg_surprisals),  # d: offset
             ]
+            lower = [0.0, 0.0, np.min(log_steps) - 1, np.min(neg_surprisals) - 2 * rng - 1]
+            upper = [10 * rng + 1, 100.0, np.max(log_steps) + 1, np.max(neg_surprisals) + 1]
 
             popt, _ = curve_fit(
                 sigmoid_function,
                 log_steps,
                 neg_surprisals,
                 p0=initial_guess,
-                maxfev=1000,
+                bounds=(lower, upper),
+                maxfev=20000,
             )
 
             # Find step where surprisal reaches threshold
             a, b, c, d = popt
             neg_threshold = -threshold_surprisal
 
-            if b <= 0 or a <= 0:
+            if b <= 1e-6 or a <= 1e-6:
                 return None
 
             if neg_threshold <= d or neg_threshold >= a + d:
@@ -247,7 +253,8 @@ class AoAEvaluator:
         return number * multiplier
 
     def compute_curve_fitness(
-        self, model_results: dict[str, t.Any], target_words: list[str] | None = None
+        self, model_results: dict[str, t.Any], tokenizer: t.Any,
+        target_words: list[str] | None = None,
     ) -> dict[str, float]:
         """
         Compute curve fitness scores comparing model and child acquisition.
@@ -256,6 +263,15 @@ class AoAEvaluator:
         results = model_results.get("results", [])
         if not results:
             raise ValueError("No results found in model data")
+
+        vocab_size = tokenizer.vocab_size
+        # Subword length of a word in context: tokenize after a fixed prefix and subtract
+        # it, cancelling the tokenizer's leading-space handling.
+        prefix_ids = tokenizer("The", add_special_tokens=False)["input_ids"]
+
+        def subword_len(word: str) -> int:
+            ids = tokenizer("The " + word, add_special_tokens=False)["input_ids"]
+            return max(1, len(ids) - len(prefix_ids))
 
         # Organize data by word
         word_data = {}
@@ -301,9 +317,18 @@ class AoAEvaluator:
             if child_aoa is None:
                 continue
 
-            # Compute model AoA
+            # Average the per-context surprisals within each checkpoint, so the fit and
+            # the threshold floor use one denoised point per step rather than the noisy
+            # per-context cloud (a single low context otherwise strands the threshold).
+            steps_arr = np.array(word_data[word]["steps"])
+            surp_arr = np.array(word_data[word]["surprisals"])
+            uniq_steps = np.unique(steps_arr)
+            mean_surprisals = [float(surp_arr[steps_arr == s].mean()) for s in uniq_steps]
+
+            # Compute model AoA (ceiling scaled by the word's subword length)
             model_aoa = self.compute_model_aoa(
-                word_data[word]["surprisals"], word_data[word]["steps"]
+                mean_surprisals, uniq_steps.tolist(),
+                vocab_size, n_subword_tokens=subword_len(word),
             )
             if model_aoa is None:
                 continue
@@ -318,6 +343,9 @@ class AoAEvaluator:
 
         # Compute correlation (curve fitness)
         correlation, p_value = pearsonr(model_aoas, child_aoas)
+
+        if p_value > 0.1:
+            return {"curve_fitness": 0.0, "n_words": len(model_aoas)}
 
         # Compute mean monthly scores (simplified metric)
         mean_monthly_scores = {}

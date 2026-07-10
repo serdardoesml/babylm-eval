@@ -21,7 +21,16 @@ class CompletionRankingDataset(Dataset):
 
     def __init__(self: CompletionRankingDataset, args: argparse.Namespace):
         self.backend: str = args.backend
-        self.processor: ProcessorMixin = AutoProcessor.from_pretrained(args.model_path_or_name, padding_side="right", revision=args.revision_name, trust_remote_code=True)
+        try:
+            self.processor: ProcessorMixin = AutoProcessor.from_pretrained(args.model_path_or_name, padding_side="right", revision=args.revision_name, trust_remote_code=True)
+        except (ValueError, KeyError):
+            # Checkpoints saved by transformers 5.x record tokenizer_class
+            # "TokenizersBackend", unknown to 4.x AutoProcessor/AutoTokenizer.
+            # PreTrainedTokenizerFast loads tokenizer.json directly.
+            from transformers import PreTrainedTokenizerFast
+            self.processor = PreTrainedTokenizerFast.from_pretrained(
+                args.model_path_or_name, padding_side="right",
+                revision=args.revision_name)
         self.tokenizer = self.processor.tokenizer if hasattr(self.processor, "tokenizer") else self.processor
 
         if self.tokenizer.pad_token_id is None:

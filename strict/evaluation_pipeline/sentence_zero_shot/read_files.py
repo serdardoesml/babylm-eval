@@ -38,16 +38,16 @@ def read_files(args: Namespace) -> list[dict[str, str]]:
 
         with filename.open("r") as f:
             for line in f:
-                data.append(decode(line, filename, args.task, args.full_sentence_scores, images))
+                data.extend(decode(line, filename, args.task, args.full_sentence_scores, images))
 
     del images
 
     return data
 
 
-def decode(line: str, file_name: pathlib.Path, task: str, full_sentence_scores: bool, images: Dataset | None) -> dict[str, str]:
+def decode(line: str, file_name: pathlib.Path, task: str, full_sentence_scores: bool, images: Dataset | None) -> list[dict[str, str]]:
     """This function takes a line of a JSONL file and returns a
-    dictionary of terms to be used by the evaluation.
+    list of dictionaries of terms to be used by the evaluation.
 
     Args:
         line(str): A JSONL line from a datafile.
@@ -60,28 +60,33 @@ def decode(line: str, file_name: pathlib.Path, task: str, full_sentence_scores: 
             are no images associated with the dataset.
 
     Returns:
-        dict[str, str]: A dictionary with values used for
-            evaluation.
+        list[dict[str, str]]: A list of dictionaries with values
+            used for evaluation. Usually a single-element list, but
+            may be empty if the datapoint should be skipped.
     """
 
     raw_dict = json.loads(line.strip())
 
-    if task == "blimp":
+    if task == "entity_tracking":
+        return decode_entity_tracking(raw_dict, file_name)
+    elif task == "blimp":
         data_dict = decode_blimp(raw_dict, file_name)
     elif task == "ewok":
         data_dict = decode_ewok(raw_dict, full_sentence_scores)
-    elif task == "entity_tracking":
-        data_dict = decode_entity_tracking(raw_dict, file_name)
     elif task == "comps":
         data_dict = decode_comps(raw_dict, file_name)
     elif task == "vqa":
         data_dict = decode_vqa(raw_dict, images)
     elif task == "winoground":
         data_dict = decode_winoground(raw_dict, images)
+    elif task == "global_piqa_parallel":
+        data_dict = decode_global_piqa_parallel(raw_dict)
+    elif task == "global_piqa_nonparallel":
+        data_dict = decode_global_piqa_nonparallel(raw_dict)
     else:
         raise NotImplementedError(f"The task {task} is not implemented! Please implement it or choose one of the implemented tasks.")
 
-    return data_dict
+    return [data_dict]
 
 
 def decode_blimp(raw_dict: dict[str, Any], file_name: pathlib.Path) -> dict[str, str]:
@@ -153,19 +158,26 @@ def decode_ewok(raw_dict: dict[str, Any], full_sentence_scores: bool) -> dict[st
 
     return pair
 
-def decode_entity_tracking(raw_dict: dict[str, Any], file_name: pathlib.Path) -> dict[str, str]:
+def decode_entity_tracking(raw_dict: dict[str, Any], file_name: pathlib.Path) -> list[dict[str, str]]:
     """This function takes a dictionary of a single datapoint
-    of an Entity Tracking datafile and returns a dictionary of
-    terms to be used by the evaluation.
+    of an Entity Tracking datafile and returns a list containing
+    a dictionary of terms to be used by the evaluation.
+
+    Datapoints where any answer option contains the word "nothing"
+    are skipped by returning an empty list.
 
     Args:
         raw_dict(dict[str, Any]): A dictionary from a single
             datapoint of an Entity Tracking datafile.
 
     Returns:
-        dict[str, str]: A dictionary with values used for
-            evaluation.
+        list[dict[str, str]]: A single-element list with values
+            used for evaluation, or an empty list if the datapoint
+            should be skipped.
     """
+    if any("nothing" in option for option in raw_dict["options"]):
+        return []
+
     subset = f'{file_name.stem}_{raw_dict["numops"]}_ops'
     pair = {
         "sentences" : [raw_dict["input_prefix"] + option for option in raw_dict["options"]],
@@ -175,7 +187,7 @@ def decode_entity_tracking(raw_dict: dict[str, Any], file_name: pathlib.Path) ->
         "UID" : subset,
     }
 
-    return pair
+    return [pair]
 
 
 def decode_comps(raw_dict: dict[str, Any], file_name: pathlib.Path) -> dict[str, str]:
@@ -266,3 +278,60 @@ def decode_winoground(raw_dict: dict[str, Any], images: Dataset) -> dict[str, st
         pair["image"] = images[raw_dict["image_idx"]][raw_dict["image_key"]].convert("RGB")
 
     return pair
+
+
+def _build_global_piqa_pair(raw_dict: dict[str, Any], num_solutions: int) -> dict[str, str]:
+    """Shared helper for the Global PIQA tasks. Each datapoint has a shared
+    `prompt` and `num_solutions` candidate continuations (`solution0` ...
+    `solution{num_solutions - 1}`). The model must assign the highest
+    (length-normalized) score to the continuation indicated by `label`.
+
+    Args:
+        raw_dict(dict[str, Any]): A dictionary from a single datapoint of a
+            Global PIQA datafile.
+        num_solutions(int): The number of candidate solutions per datapoint
+            (4 for the parallel task, 2 for the nonparallel task).
+
+    Returns:
+        dict[str, str]: A dictionary with values used for evaluation.
+    """
+    solutions = [raw_dict[f"solution{i}"] for i in range(num_solutions)]
+    pair = {
+        "sentences": [" ".join([raw_dict["prompt"], solution]) for solution in solutions],
+        "prefixes": [raw_dict["prompt"] for _ in solutions],
+        "completions": [" " + solution for solution in solutions],
+        "label": raw_dict["label"],
+        "UID": raw_dict["example_id"],
+    }
+
+    return pair
+
+
+def decode_global_piqa_parallel(raw_dict: dict[str, Any]) -> dict[str, str]:
+    """This function takes a dictionary of a single datapoint of a Global PIQA
+    parallel datafile (4 candidate solutions) and returns a dictionary of terms
+    to be used by the evaluation.
+
+    Args:
+        raw_dict(dict[str, Any]): A dictionary from a single datapoint of a
+            Global PIQA parallel datafile.
+
+    Returns:
+        dict[str, str]: A dictionary with values used for evaluation.
+    """
+    return _build_global_piqa_pair(raw_dict, 4)
+
+
+def decode_global_piqa_nonparallel(raw_dict: dict[str, Any]) -> dict[str, str]:
+    """This function takes a dictionary of a single datapoint of a Global PIQA
+    nonparallel datafile (2 candidate solutions) and returns a dictionary of
+    terms to be used by the evaluation.
+
+    Args:
+        raw_dict(dict[str, Any]): A dictionary from a single datapoint of a
+            Global PIQA nonparallel datafile.
+
+    Returns:
+        dict[str, str]: A dictionary with values used for evaluation.
+    """
+    return _build_global_piqa_pair(raw_dict, 2)

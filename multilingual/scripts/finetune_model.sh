@@ -57,5 +57,32 @@ for LANGUAGE in $langs; do
     done
 done
 
+# Per-token classification (POS tagging) on Universal Dependencies. Trained once
+# on a uniform cross-lingual mixture of all requested languages and evaluated
+# per language (results land in finetune/results/<model>/pos/<lang>/). Data is
+# built on the fly from the UD treebanks (see pos_data.py), so there are no
+# train_file/validation_file arguments here.
+pos_langs=""
+for LANGUAGE in $langs; do pos_langs="$pos_langs ${LANGUAGE:0:2}"; done
+pos_langs="${pos_langs# }"  # eng/nld/zho -> "en nl zh"
+mkdir -p finetune/results/$model_basename/pos/
+
+python3 finetune/finetune_token_classification.py \
+      --model_name_or_path "$MODEL_NAME" \
+      --language "$pos_langs" \
+      --output_dir "finetune/results/${model_basename}/pos" \
+      --do_train \
+      --do_eval \
+      --do_predict \
+      --max_seq_length 128 \
+      --per_device_train_batch_size "$BSZ" \
+      --learning_rate "$LR" \
+      --num_train_epochs "$MAX_EPOCHS" \
+      --patience "$PATIENCE" \
+      --eval_strategy epoch \
+      --save_strategy epoch \
+      --overwrite_output_dir \
+      --seed "$SEED"
+
 # Add `--trust_remote_code` if you need to load custom config/model files.
 # If you run into memory issues, try reducing $BSZ or reducing `--max_seq_length` first.

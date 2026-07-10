@@ -3,6 +3,9 @@
 
 This repository contains the setup for evaluation for BabyLM 2026. We provide separate evaluation for the Strict (+Strict-Small) track, and the Multilingual track. See the two track directories for more specific information on evaluation for these two tracks.
 
+The Multilingual Chinese zero-shot suite includes the Hanzi structure and
+pinyin minimal-pair evaluations.
+
 If you have questions about or suggestions for this code, please open an issue and consider [joining our Slack](https://join.slack.com/t/babylmchallenge/shared_invite/zt-2gqgqaumu-5ebxxADuT561aT_ooKbT1Q). Join the `#evaluation` channel, which is dedicated to support for use of this repository.
 
 We also welcome pull requests!
@@ -29,14 +32,16 @@ Scores are computed server-side against the held-out targets, so you only upload
 
 #### Multilingual track
 
-Upload a **pre-computed scores file**. Run zero-shot and fine-tuning evaluation first, then collate the results into a single submission file:
+Upload the **scores and predictions files** produced by the collator. Public
+tasks use their pre-computed scores; hidden Hanzi and MECO scores are computed
+server-side from raw predictions/surprisals:
 
 ```bash
 cd multilingual
 bash scripts/zeroshot_model.sh --model_name YOUR_MODEL --langs "eng nld zho"
 bash scripts/finetune_model.sh --model_name YOUR_MODEL --langs "eng nld zho"
 
-# Collate into a single submission file
+# Produce <model>_submission.json and <model>_predictions.json
 python scripts/collate_results.py --model_name YOUR_MODEL
 ```
 
@@ -71,6 +76,7 @@ Following [BabyBabelLM](https://arxiv.org/pdf/2510.10159), we divide evaluation 
 | rte (accuracy) | 56.83 | **60.43** |
 
 ### Multilingual Track
+
 #### Zero-shot Tasks
 | task | gpt2-baseline-BabyLM-2026-Strict | gpt2-baseline-BabyLM-2026-Strict-Small | gpt2-baseline-babylm-nld | gpt2-baseline-babylm-zho | gpt2-baseline-en_nld_equal | gpt2-baseline-en_zho_equal | gpt2-baseline-nld_zho_equal | gpt2-baseline-en_nld_zho_equal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -96,6 +102,32 @@ Following [BabyBabelLM](https://arxiv.org/pdf/2510.10159), we divide evaluation 
 | xstorycloze_zh_mubench |  |  |  | 50.23 |  | **51.55** | 50.54 | 50.62 |
 | zhoblimp |  |  |  | **78.79** |  | 78.60 | 77.23 | 75.44 |
 | *avg* |  |  |  | **52.87** |  | 52.25 | 51.79 | 51.34 |
+
+#### Chinese Hanzi Zero-shot
+
+| Model | Hanzi Structure | Hanzi Pinyin |
+| --- | ---: | ---: |
+| BabyLM-2026-Baseline-GPT2-Strict | 0.00 | 0.00 |
+| BabyLM-2026-Baseline-GPT2-Strict-Small | 0.00 | 0.00 |
+| BabyLM-2026-Baseline-GPT2-nld | 56.75 | 43.55 |
+| BabyLM-2026-Baseline-GPT2-zho | **58.20** | **51.05** |
+| BabyLM-2026-Baseline-GPT2-en_nld_equal | 55.60 | 44.00 |
+| BabyLM-2026-Baseline-GPT2-en_zho_equal | 55.05 | 48.75 |
+| BabyLM-2026-Baseline-GPT2-nld_zho_equal | 56.15 | 48.20 |
+| BabyLM-2026-Baseline-GPT2-en_nld_zho_equal | 55.05 | 50.05 |
+
+#### MECO Reading Time
+
+| Model | L1 English | L1 Dutch | L1 Chinese | L2 Dutch | L2 Chinese |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| BabyLM-2026-Baseline-GPT2-Strict | 5086.50 |  |  |  |  |
+| BabyLM-2026-Baseline-GPT2-Strict-Small | 5167.64 |  |  |  |  |
+| BabyLM-2026-Baseline-GPT2-nld |  | 294.31 |  |  |  |
+| BabyLM-2026-Baseline-GPT2-zho |  |  | **651.28** |  |  |
+| BabyLM-2026-Baseline-GPT2-en_nld_equal | 5203.98 | **425.05** |  | 13.55 |  |
+| BabyLM-2026-Baseline-GPT2-en_zho_equal | **5209.61** |  | 638.52 |  | **97.08** |
+| BabyLM-2026-Baseline-GPT2-nld_zho_equal |  | 276.33 | 628.91 |  |  |
+| BabyLM-2026-Baseline-GPT2-en_nld_zho_equal | 5157.10 | 388.27 | 632.02 | **55.41** | 63.97 |
 
 #### Finetuning tasks
 | task | gpt2-baseline-BabyLM-2026-Strict | gpt2-baseline-BabyLM-2026-Strict-Small | gpt2-baseline-babylm-nld | gpt2-baseline-babylm-zho | gpt2-baseline-en_nld_equal | gpt2-baseline-en_zho_equal | gpt2-baseline-nld_zho_equal | gpt2-baseline-en_nld_zho_equal |
